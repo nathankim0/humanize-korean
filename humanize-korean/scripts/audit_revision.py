@@ -51,6 +51,7 @@ PATTERNS = (
     ),
     ProtectedPattern("double_quote", re.compile(r'"[^"\n]+"|“[^”\n]+”')),
     ProtectedPattern("korean_quote", re.compile(r"「[^」\n]+」|『[^』\n]+』")),
+    ProtectedPattern("acronym", re.compile(r"(?<![A-Za-z0-9])[A-Z][A-Z0-9]{1,}(?:[-_.][A-Z0-9]+)*(?![A-Za-z0-9])")),
     ProtectedPattern(
         "version",
         re.compile(r"(?<![\w])v?\d+(?:\.\d+){1,}(?:[-+][A-Za-z0-9.-]+)?(?![\w])", re.IGNORECASE),
@@ -64,7 +65,6 @@ PATTERNS = (
             re.IGNORECASE,
         ),
     ),
-    ProtectedPattern("acronym", re.compile(r"(?<![A-Za-z0-9])[A-Z][A-Z0-9]{1,}(?:[-_.][A-Z0-9]+)*(?![A-Za-z0-9])")),
 )
 
 

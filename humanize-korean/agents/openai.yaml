@@ -1,4 +1,4 @@
 interface:
   display_name: "궁극의 한글 윤문"
   short_description: "AI 티·번역투·맞춤법·문체를 한 번에 다듬는 한글 윤문"
-  default_prompt: "Use $humanize-korean to make this Korean text natural while preserving its meaning."
+  default_prompt: "$humanize-korean으로 이 한글의 의미를 보존하면서 AI스럽지 않게 자연스럽게 윤문해 주세요."

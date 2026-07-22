@@ -49,8 +49,23 @@ PATTERNS = (
         "email",
         re.compile(r"(?<![\w.+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![\w.-])"),
     ),
+    ProtectedPattern(
+        "file_path",
+        re.compile(
+            r"(?<![\w:])(?:\.{0,2}/|/)?[A-Za-z0-9._~@%+,-]+"
+            r"(?:/[A-Za-z0-9._~@%+,-]+)+(?![\w/])"
+        ),
+    ),
     ProtectedPattern("double_quote", re.compile(r'"[^"\n]+"|“[^”\n]+”')),
+    ProtectedPattern("single_quote", re.compile(r"‘[^’\n]+’")),
     ProtectedPattern("korean_quote", re.compile(r"「[^」\n]+」|『[^』\n]+』")),
+    ProtectedPattern(
+        "identifier",
+        re.compile(
+            r"(?<![A-Za-z0-9_])(?:[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+|"
+            r"[a-z]+[A-Z][A-Za-z0-9]*)(?![A-Za-z0-9_])"
+        ),
+    ),
     ProtectedPattern("acronym", re.compile(r"(?<![A-Za-z0-9])[A-Z][A-Z0-9]{1,}(?:[-_.][A-Z0-9]+)*(?![A-Za-z0-9])")),
     ProtectedPattern(
         "version",
@@ -59,9 +74,9 @@ PATTERNS = (
     ProtectedPattern(
         "number",
         re.compile(
-            r"(?<![\w])(?:₩|\$|€|£)?[+-]?\d[\d,]*(?:\.\d+)?"
+            r"(?<![0-9A-Za-z_.])(?:₩|\$|€|£)?[+-]?\d[\d,]*(?:\.\d+)?"
             r"(?:\s?(?:%|퍼센트|원|달러|유로|명|개|건|회|배|점|년|월|일|시|분|초|"
-            r"kg|g|mg|km|m|cm|mm|GB|MB|KB|TB|Hz|px))?(?![\w])",
+            r"kg|g|mg|km|m|cm|mm|GB|MB|KB|TB|Hz|px))?(?![0-9A-Za-z_.])",
             re.IGNORECASE,
         ),
     ),

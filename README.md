@@ -1,20 +1,25 @@
 # Humanize Korean
 
-두 한국어 윤문 프로젝트의 장점을 하나로 합친 Codex 전역 스킬입니다. 원문의 사실과 의미는 지키면서 AI 특유의 상투어·번역투·기계적 구조를 덜어 내고, 필요하면 맞춤법 교정과 문체 변환까지 한 흐름에서 처리합니다.
+세 한국어 윤문 프로젝트의 장점을 충돌 없이 합친 Codex 전역 스킬입니다. 원문의 사실과 의미는 지키면서 AI 특유의 상투어·번역투·기계적 구조를 덜어 내고, 맞춤법·군더더기·경어법·문체 변환부터 사용자와 함께하는 문장 재구성까지 한 흐름에서 처리합니다.
 
 기반 프로젝트:
 
 - [epoko77-ai/im-not-ai](https://github.com/epoko77-ai/im-not-ai) — AI 문체 분류, 국소 편집, 변경률·사실 보존 검증
 - [amondnet/yoonmoon](https://github.com/amondnet/yoonmoon) — 교정, 번역 윤문, AI 티 제거, 문체 변환, 진단 라우팅
+- [Turtle-Hwan/im-ai-copyeditor](https://github.com/Turtle-Hwan/im-ai-copyeditor) — 문장별 작업표, `적·의·것·들`과 영어·일본어 직역 구조, 맞춤법·경어법 세분 규칙, 대화형 공동 교정
 
 ## 주요 기능
 
 - `AI스럽지 않게`, `사람이 쓴 것처럼`, `ChatGPT 티 제거` 같은 자연어 요청으로 자동 호출
-- AI 티 제거, 전체 윤문, 교정·교열, 번역 윤문, 문체 변환, AI 문체 신호 진단의 6개 모드
+- AI 티 제거, 전체 윤문, 교정·교열, 문장 다듬기, 번역 윤문, 문체 변환, AI 문체 신호 진단, 공동 교정의 8개 모드
+- `적·의·것·들`, 군더더기 `있다/수 있다`, 피동, 무생물 주어, 직역 대명사·전치사, 명사화, 만연체를 다루는 26개 문장 규칙
+- `예요/이에요`부터 사이시옷·두음법칙·외래어 표기까지 세분한 24개 교정 규칙
+- 사물존칭·간접높임·객체높임·종결체·쉬운 공공언어를 구분하는 9개 문체 규칙
 - 고유명사·수치·날짜·인용·URL·코드·전문 용어 보호
 - 보수·기본·적극의 3단계 윤문 강도
 - 원문 장르와 존댓말·반말·격식 수준 유지
-- 과윤문 변경률과 보호 요소 변조를 잡는 결정적 검사 스크립트
+- 장문을 모든 문장 단위로 분할하고 원래 구조에 되붙이는 무손실 작업표 파이프라인
+- 문장 수·과윤문 변경률·보호 요소 변조를 잡는 세 개의 결정적 검사 스크립트
 - `~로 이어진다`, `~로 이어지게 한다`처럼 반복되는 만능 결과 동사도 별도 패턴으로 억제
 
 이 스킬은 AI 탐지기 회피가 아니라 사람이 읽기 편한 자연스러운 한국어를 목표로 합니다. 가짜 경험, 감정, 수치, 오탈자를 만들어 사람 글처럼 위장하지 않습니다.
@@ -55,6 +60,10 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-installer/scripts/inst
 
 ```text
 이 글에 AI 문체 신호가 있는지 단정하지 말고 근거와 신뢰도를 알려줘.
+```
+
+```text
+이 글을 문장마다 같이 고치자. 의미가 달라지는 선택만 한 번에 하나씩 물어봐.
 ```
 
 명시적으로 호출하려면 `$humanize-korean`을 붙입니다.
@@ -158,20 +167,45 @@ AI 문체 신호: 중간 / 신뢰도: 낮음
 
 신호 진단은 문체 특징만 설명합니다. `AI가 썼다`거나 `사람이 썼다`고 보증하지 않습니다.
 
+### 8. 군더더기와 경어법까지 정밀 교정하기
+
+**Before**
+
+> 주문하신 커피 나오셨습니다. 이 메뉴는 고객들에게 다양한 선택의 기회를 제공할 수 있는 장점을 가지고 있어요.
+
+**After**
+
+> 주문하신 커피 나왔습니다. 이 메뉴는 고객에게 선택의 폭을 넓혀 주는 장점이 있어요.
+
+사물존칭을 바로잡고, 불필요한 복수·`-의`·`수 있는`·`가지고 있다`를 문맥에 맞게 줄입니다. 표현 자체가 정보를 담고 있으면 같은 형태라도 유지합니다.
+
 ## 처리 모드
 
 | 모드 | 대표 요청 | 처리 범위 |
 | --- | --- | --- |
 | AI 티 제거 | AI스럽지 않게, 사람처럼 | 상투어·번역투·구조·리듬을 국소 수정 |
-| 전체 윤문 | 싹 다듬어줘, 풀코스 | 교정 → 번역투 → AI 티 → 요청 시 문체 변환 |
+| 전체 윤문 | 싹 다듬어줘, 풀코스 | 교정 → 문장 → 번역투 → AI 티 → 요청 시 문체 변환 |
 | 교정·교열 | 맞춤법, 띄어쓰기, 비문 | 객관적 규범 오류만 수정 |
+| 문장 다듬기 | 첨삭, 군더더기, 적·의·것·들 | 문장 단위 간소화와 구조 개선 |
 | 번역 윤문 | 번역투, 직역체, MTPE | 정보는 유지하고 번역체만 수정 |
 | 문체 변환 | 존댓말, 반말, 이메일 톤 | 목표 register와 매체 톤으로 변환 |
 | 신호 진단 | AI가 쓴 것 같아? | 확률적 문체 신호만 진단하고 원문은 유지 |
+| 공동 교정 | 같이 고치자, 되물어줘, grill | 의미·구조 선택을 하나씩 합의한 뒤 재구성 |
 
 ## 안전 검증
 
-파일 윤문 결과는 포함된 검사기로 확인할 수 있습니다.
+짧은 글은 직접 처리하고, 파일이나 누락 위험이 있는 장문은 문장별 작업표로 처리할 수 있습니다.
+
+```bash
+python3 humanize-korean/scripts/segment.py original.md --outdir work
+# work/worksheet.md의 모든 윤문/규칙 칸을 채운 뒤
+python3 humanize-korean/scripts/reassemble.py \
+  work/segments.json work/worksheet.md --out original.humanized.md
+```
+
+분할기는 문장 수와 원래 공백·개행을 보존하고 Markdown 헤딩·목록·표·코드 블록을 수정 금지 구조로 격리합니다. 재조립기는 문장 누락과 50% 초과 과윤문을 거부합니다. 문장 병합·분할이 필요한 공동 재집필에는 이 엄격한 1:1 파이프라인을 사용하지 않습니다.
+
+완성된 파일은 보호 요소 검사기로 다시 확인합니다.
 
 ```bash
 python3 humanize-korean/scripts/audit_revision.py \
@@ -187,20 +221,37 @@ python3 humanize-korean/scripts/audit_revision.py \
 
 명시적 문체 변환처럼 넓은 수정이 정상인 작업은 `--allow-wide-change`로 변경률 게이트만 면제할 수 있습니다. 보호 요소 검사는 계속 적용됩니다.
 
+저장소 자체 검증은 Python 표준 라이브러리만 사용합니다.
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py humanize-korean
+```
+
 ## 저장소 구조
 
 ```text
-humanize-korean/
-├── SKILL.md
-├── agents/openai.yaml
-├── references/
-│   ├── core-workflow.md
-│   ├── ai-tell-rulebook.md
-│   ├── proofreading-rules.md
-│   ├── translationese-rules.md
-│   ├── register-guide.md
-│   └── detection-guide.md
-└── scripts/audit_revision.py
+.
+├── README.md
+├── THIRD_PARTY_NOTICES.md
+├── humanize-korean/
+│   ├── SKILL.md
+│   ├── agents/openai.yaml
+│   ├── references/
+│   │   ├── core-workflow.md
+│   │   ├── ai-tell-rulebook.md
+│   │   ├── proofreading-rules.md
+│   │   ├── sentence-rules.md
+│   │   ├── translationese-rules.md
+│   │   ├── register-guide.md
+│   │   ├── detection-guide.md
+│   │   ├── collaborative-editing.md
+│   │   └── sources.md
+│   └── scripts/
+│       ├── segment.py
+│       ├── reassemble.py
+│       └── audit_revision.py
+└── tests/test_skill.py
 ```
 
 ## 라이선스

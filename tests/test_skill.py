@@ -162,5 +162,20 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(result.added)
 
 
+class RulebookTests(unittest.TestCase):
+    def test_concrete_fact_rule_is_linked_across_workflow(self) -> None:
+        skill = (ROOT / "humanize-korean" / "SKILL.md").read_text(encoding="utf-8")
+        sentence_rules = (
+            ROOT / "humanize-korean" / "references" / "sentence-rules.md"
+        ).read_text(encoding="utf-8")
+        ai_rules = (
+            ROOT / "humanize-korean" / "references" / "ai-tell-rulebook.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("구체적인 기능이나 사실을 막연한 평가로 바꾸지 않는다", skill)
+        self.assertIn("S-27. 구체적인 사실을 가리는 추상 평가", sentence_rules)
+        self.assertIn("N. 관찰 가능한 사실을 감상으로 바꾸는 문장", ai_rules)
+        self.assertIn("구절마다 해설을 볼 수 있었어요", sentence_rules)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

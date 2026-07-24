@@ -161,6 +161,56 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(result.missing)
         self.assertTrue(result.added)
 
+    def test_new_conventional_naming_claim_rejects(self) -> None:
+        before = (
+            "누가복음 11장 5절부터 13절에는 한 사람이 밤중에 벗을 찾아가는 "
+            "장면이 나온다. 본문을 읽고 기도에 관해 묵상한다. "
+            "본문이 직접 말하는 내용만 차례로 살펴본다."
+        )
+        after = (
+            "누가복음 11장 5절부터 13절에는 한 사람이 밤중에 벗을 찾아가는 "
+            "장면이 나온다. 이 본문은 보통 한밤중 친구 이야기로 소개됩니다. "
+            "본문을 읽고 기도에 관해 묵상한다. 본문이 직접 말하는 내용만 "
+            "차례로 살펴본다."
+        )
+        result, code = audit_revision.audit(before, after, 0.30, 0.50, False)
+        self.assertEqual(code, 2)
+        self.assertTrue(result.new_knowledge_claims)
+        self.assertIn("conventional_naming", result.new_knowledge_claims[0])
+
+    def test_existing_conventional_claim_is_not_counted_as_new(self) -> None:
+        before = (
+            "이 장면은 보통 밤중의 요청으로 소개됩니다. "
+            "이 문장은 원문에 이미 있는 주장이다. 뒤 문장도 그대로 둔다."
+        )
+        after = (
+            "이 장면은 흔히 밤중의 요청으로 불립니다. "
+            "이 문장은 원문에 이미 있는 주장이다. 뒤 문장도 그대로 둔다."
+        )
+        result, _ = audit_revision.audit(before, after, 0.30, 0.50, False)
+        self.assertFalse(result.new_knowledge_claims)
+
+    def test_other_new_knowledge_claim_types_reject(self) -> None:
+        before = (
+            "원문은 확인할 수 있는 장면만 설명한다. "
+            "추가 배경이나 사람들의 평가는 제시하지 않는다."
+        )
+        additions = (
+            "전통적으로 이 이름이 사용되어 왔다.",
+            "전문가들은 이 장면을 같은 뜻으로 해석합니다.",
+        )
+        for addition in additions:
+            with self.subTest(addition=addition):
+                result, code = audit_revision.audit(
+                    before,
+                    f"{before} {addition}",
+                    0.30,
+                    0.50,
+                    False,
+                )
+                self.assertEqual(code, 2)
+                self.assertTrue(result.new_knowledge_claims)
+
 
 class RulebookTests(unittest.TestCase):
     def test_concrete_fact_rule_is_linked_across_workflow(self) -> None:
@@ -176,6 +226,23 @@ class RulebookTests(unittest.TestCase):
         self.assertIn("S-27. 구체적인 사실을 가리는 추상 평가", sentence_rules)
         self.assertIn("N. 관찰 가능한 사실을 감상으로 바꾸는 문장", ai_rules)
         self.assertIn("구절마다 해설을 볼 수 있었어요", sentence_rules)
+
+    def test_evidence_boundary_rule_is_linked_across_workflow(self) -> None:
+        skill = (ROOT / "humanize-korean" / "SKILL.md").read_text(encoding="utf-8")
+        workflow = (
+            ROOT / "humanize-korean" / "references" / "core-workflow.md"
+        ).read_text(encoding="utf-8")
+        sentence_rules = (
+            ROOT / "humanize-korean" / "references" / "sentence-rules.md"
+        ).read_text(encoding="utf-8")
+        ai_rules = (
+            ROOT / "humanize-korean" / "references" / "ai-tell-rulebook.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("근거 지도", skill)
+        self.assertIn("근거 경계 불변", workflow)
+        self.assertIn("S-28. 편집 표지를 본문 사실로 승격", sentence_rules)
+        self.assertIn("O. 출처 없는 통용성·합의·배경 문장", ai_rules)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

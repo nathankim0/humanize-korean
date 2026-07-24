@@ -2,12 +2,13 @@
 """한국어 윤문본의 변경률과 보호 요소 보존 여부를 결정적으로 검사한다.
 
 이 검사는 의미 동등성을 증명하지 않는다. 수치, 인용, URL, 코드처럼 기계적으로
-비교할 수 있는 요소의 누락·추가와 과도한 수정 범위를 조기에 잡는 안전 게이트다.
+비교할 수 있는 요소의 누락·추가, 과도한 수정 범위, 새로 생긴 무주체 통용성·합의
+주장을 조기에 잡는 안전 게이트다.
 
 Exit codes:
   0: 통과
   1: 변경률 경고
-  2: 보호 요소 변경 또는 변경률 중단 기준 초과
+  2: 보호 요소 변경, 새 근거 없는 주장 또는 변경률 중단 기준 초과
   3: 입력·실행 오류
 """
 
@@ -82,6 +83,44 @@ PATTERNS = (
     ),
 )
 
+KNOWLEDGE_CLAIM_PATTERNS = (
+    ProtectedPattern(
+        "conventional_naming",
+        re.compile(
+            r"(?:흔히|보통|일반적으로|대개|통상)"
+            r"[^.!?\n]{0,80}"
+            r"(?:불(?:리|립)|부르|알려|소개|여겨|통하|라고\s*(?:한|합니))"
+        ),
+    ),
+    ProtectedPattern(
+        "tradition_claim",
+        re.compile(
+            r"(?:전통적으로|역사적으로|오랫동안)"
+            r"[^.!?\n]{0,80}"
+            r"(?:알려|여겨|불리|전해|사용|해석|소개|간주)"
+        ),
+    ),
+    ProtectedPattern(
+        "anonymous_consensus",
+        re.compile(
+            r"(?:(?:많은|대부분의|대다수의)\s*)?"
+            r"(?:전문가|연구자|학자|사람들)"
+            r"(?:은|는|이|가|들은|들이)?"
+            r"[^.!?\n]{0,80}"
+            r"(?:말한다|말합니다|본다|봅니다|여긴다|여깁니다|"
+            r"평가한다|평가합니다|해석한다|해석합니다|동의한다|동의합니다)"
+        ),
+    ),
+    ProtectedPattern(
+        "anonymous_attribution",
+        re.compile(
+            r"[^.!?\n]{1,60}(?:라고|으로|로)\s*"
+            r"(?:불린다|불립니다|알려져\s*있|소개된다|소개됩니다|"
+            r"여겨진다|여겨집니다|평가된다|평가됩니다|전해진다|전해집니다)"
+        ),
+    ),
+)
+
 
 @dataclass
 class AuditResult:
@@ -92,6 +131,7 @@ class AuditResult:
     protected_after: int
     missing: list[str]
     added: list[str]
+    new_knowledge_claims: list[str]
     gate: str
     message: str
 
@@ -142,6 +182,36 @@ def display_items(items: Counter[str], limit: int = 20) -> list[str]:
     return rendered
 
 
+def extract_knowledge_claims(text: str) -> dict[str, list[str]]:
+    """고신뢰도 무주체 통용성·합의 표현을 종류별로 추출한다."""
+    found: dict[str, list[str]] = {}
+    occupied: list[tuple[int, int]] = []
+    for pattern in KNOWLEDGE_CLAIM_PATTERNS:
+        for match in pattern.regex.finditer(text):
+            if overlaps(match.start(), match.end(), occupied):
+                continue
+            found.setdefault(pattern.kind, []).append(match.group(0))
+            occupied.append((match.start(), match.end()))
+    return found
+
+
+def find_added_knowledge_claims(before: str, after: str) -> list[str]:
+    """원문보다 윤문본에 같은 종류의 근거 없는 주장 표지가 늘었는지 본다."""
+    before_claims = extract_knowledge_claims(before)
+    after_claims = extract_knowledge_claims(after)
+    added: list[str] = []
+    for kind, values in after_claims.items():
+        increase = len(values) - len(before_claims.get(kind, []))
+        if increase <= 0:
+            continue
+        for value in values[-increase:]:
+            compact = re.sub(r"\s+", " ", value).strip()
+            if len(compact) > 120:
+                compact = compact[:117] + "..."
+            added.append(f"{kind}: {compact}")
+    return added[:20]
+
+
 def audit(
     before: str,
     after: str,
@@ -155,6 +225,7 @@ def audit(
     protected_after = extract_protected(after)
     missing_counter = protected_before - protected_after
     added_counter = protected_after - protected_before
+    new_knowledge_claims = find_added_knowledge_claims(before, after)
     rate = 1.0 - SequenceMatcher(None, before, after, autojunk=False).ratio()
 
     missing = display_items(missing_counter)
@@ -163,6 +234,13 @@ def audit(
     if missing or added:
         gate = "REJECT"
         message = "보호 요소가 변경되었습니다. 해당 수정을 롤백하고 확인하세요."
+        code = 2
+    elif new_knowledge_claims:
+        gate = "REJECT"
+        message = (
+            "원문에 없던 통용성·관행·합의 주장이 생겼습니다. "
+            "해당 문장을 원문 근거 안으로 되돌리세요."
+        )
         code = 2
     elif not allow_wide_change and rate >= abort_threshold:
         gate = "REJECT"
@@ -185,6 +263,7 @@ def audit(
         protected_after=sum(protected_after.values()),
         missing=missing,
         added=added,
+        new_knowledge_claims=new_knowledge_claims,
         gate=gate,
         message=message,
     )
@@ -242,6 +321,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"missing: {item}")
         for item in result.added:
             print(f"added: {item}")
+        for item in result.new_knowledge_claims:
+            print(f"new_knowledge_claim: {item}")
         print(result.message)
     return code
 

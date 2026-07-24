@@ -1,4 +1,4 @@
 interface:
   display_name: "한국어 통합 윤문"
-  short_description: "교정·군더더기·번역투·AI 문체·톤을 정밀하게 다듬기"
-  default_prompt: "$humanize-korean으로 이 글의 의미와 사실을 보존하면서 자연스럽고 정확한 한국어로 윤문해 주세요."
+  short_description: "근거·사실을 지키며 번역투와 AI 문체를 정밀하게 다듬기"
+  default_prompt: "$humanize-korean으로 이 글의 의미·사실·근거 경계를 보존하면서 자연스럽고 정확한 한국어로 윤문해 주세요."
